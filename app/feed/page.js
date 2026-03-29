@@ -32,7 +32,13 @@ export default function Feed() {
         try {
             const res = await fetch('/api/logs');
             const json = await res.json();
-            setLogs(json.reverse()); // Newest first
+
+            // Filter feed: hide old non-BPCL imports, show BPCL + all new entries
+            const visibleLogs = json.filter(log =>
+                log.timestamp !== 'Imported' || (log.company && log.company.toLowerCase().includes('bpcl'))
+            );
+
+            setLogs(visibleLogs.reverse()); // Newest first
         } catch (err) {
             console.error('Failed to fetch logs:', err);
         } finally {
