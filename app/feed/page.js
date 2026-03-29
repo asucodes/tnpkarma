@@ -38,7 +38,7 @@ export default function Feed() {
                 log.timestamp !== 'Imported' || (log.company && log.company.toLowerCase().includes('bpcl'))
             );
 
-            setLogs(visibleLogs.reverse()); // Newest first
+            setLogs(visibleLogs);
         } catch (err) {
             console.error('Failed to fetch logs:', err);
         } finally {
