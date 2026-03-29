@@ -80,7 +80,7 @@ export default function LogPage() {
             });
             const data = await res.json();
             if (data.success) {
-                showToast('✅ Logged successfully! +karma');
+                showToast('logged successfully');
                 // Reset form
                 setSelectedVolunteer(null);
                 setNameQuery('');
