@@ -2,6 +2,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import BottomNav from './components/BottomNav';
 import ThemeToggle from './components/ThemeToggle';
+import AuthHeader from './components/AuthHeader';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -16,8 +17,7 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  userScalable: true,
   themeColor: '#09090b',
 };
 
@@ -31,8 +31,9 @@ export default function RootLayout({ children }) {
               <img src="/cat.png" alt="tnpkarma cat" className="header-mascot" />
               <h1 className="header-title">TnP Karma</h1>
             </header>
-            <p className="header-sub">Training & Placement • Volunteer Tracker</p>
+            <p className="header-sub">Training &amp; Placement • Volunteer Tracker</p>
             <ThemeToggle />
+            <AuthHeader />
           </div>
 
           {children}

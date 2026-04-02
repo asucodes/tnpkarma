@@ -10,24 +10,27 @@ export async function POST(request) {
         const { rowIndex, company } = await request.json();
         if (!rowIndex || !company) return NextResponse.json({ success: false, error: 'Missing parameters' }, { status: 400 });
 
-        const upvoterRoll = session.rollNumber;
+        const flaggerRoll = session.rollNumber;
         const logs = await getLogs();
 
         const hasAttended = logs.some(
-            log => log.rollNumber === upvoterRoll &&
+            log => log.rollNumber === flaggerRoll &&
                 log.company.trim().toLowerCase() === company.trim().toLowerCase() &&
                 log.status === 'approved'
         );
-        if (!hasAttended) return NextResponse.json({ success: false, error: `Your log for ${company} must be approved first before you can witness others.` }, { status: 403 });
+        if (!hasAttended) return NextResponse.json({ success: false, error: `Your log for ${company} must be approved first.` }, { status: 403 });
 
         const targetLog = logs.find(log => log.rowIndex === rowIndex);
         if (!targetLog) return NextResponse.json({ success: false, error: 'Record not found' }, { status: 404 });
+        if (targetLog.rollNumber === flaggerRoll) return NextResponse.json({ success: false, error: 'Cannot flag your own log.' }, { status: 403 });
 
-        const newUpvotes = (targetLog.upvotes || 0) + 1;
-        await updateCell('Logs', `F${rowIndex}`, newUpvotes);
-        return NextResponse.json({ success: true, upvotes: newUpvotes });
+        const newDownvotes = (targetLog.downvotes || 0) + 1;
+        await updateCell('Logs', `G${rowIndex}`, newDownvotes);
+
+        const net = (targetLog.upvotes || 0) - newDownvotes;
+        return NextResponse.json({ success: true, downvotes: newDownvotes, net, disputed: net <= -3 });
     } catch (error) {
-        console.error('Upvote API Error:', error);
-        return NextResponse.json({ success: false, error: 'Failed to record witness' }, { status: 500 });
+        console.error('Flag API Error:', error);
+        return NextResponse.json({ success: false, error: 'Failed to record flag' }, { status: 500 });
     }
 }
