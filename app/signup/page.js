@@ -56,10 +56,7 @@ export default function SignupPage() {
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg-primary)' }}>
             <div style={{ width: '100%', maxWidth: '380px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', justifyContent: 'center' }}>
-                    <Image src="/cat.png" alt="TnP Karma" width={36} height={36} style={{ objectFit: 'contain' }} />
-                    <span style={{ fontSize: '1.3rem', fontWeight: '700', letterSpacing: '-0.02em' }}>TnP Karma</span>
-                </div>
+                {/* Create Account Card */}
 
                 <div className="card" style={{ padding: '24px' }}>
                     <h1 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '16px' }}>Create Account</h1>

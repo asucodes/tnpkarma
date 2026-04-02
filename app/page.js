@@ -107,11 +107,6 @@ export default function Leaderboard() {
                   <div className="lb-score">
                     <div className="lb-score-value">{scoreValue}</div>
                     <div className="lb-score-label">{currentTab.unit}</div>
-                    {/* Always show witnessed count as secondary stat */}
-                    <div className="lb-witnessed-pill">
-                      <EyeIcon size={10} />
-                      <span>{item.totalWitnessed}</span>
-                    </div>
                   </div>
                 </div>
                 {isExpanded && item.logs && (

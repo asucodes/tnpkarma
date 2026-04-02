@@ -51,8 +51,10 @@ export default function BottomNav() {
             if (data?.user?.role === 'admin') {
                 setIsAdmin(true);
                 fetch('/api/admin/pending').then(r => r.json()).then(p => setPendingCount(p.length)).catch(() => { });
+            } else {
+                setIsAdmin(false);
             }
-        }).catch(() => { });
+        }).catch(() => { setIsAdmin(false); });
     }, [pathname]);
 
     if (isAuthPage) return null;

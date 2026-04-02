@@ -7,7 +7,7 @@ export async function POST(request) {
         const session = await getSession();
         if (!session) return NextResponse.json({ success: false, error: 'Not logged in' }, { status: 401 });
 
-        const { rowIndex, company } = await request.json();
+        const { rowIndex, company, action = 'flag' } = await request.json();
         if (!rowIndex || !company) return NextResponse.json({ success: false, error: 'Missing parameters' }, { status: 400 });
 
         const flaggerRoll = session.rollNumber;
@@ -24,7 +24,13 @@ export async function POST(request) {
         if (!targetLog) return NextResponse.json({ success: false, error: 'Record not found' }, { status: 404 });
         if (targetLog.rollNumber === flaggerRoll) return NextResponse.json({ success: false, error: 'Cannot flag your own log.' }, { status: 403 });
 
-        const newDownvotes = (targetLog.downvotes || 0) + 1;
+        let newDownvotes = (targetLog.downvotes || 0);
+        if (action === 'flag') {
+            newDownvotes += 1;
+        } else if (action === 'unflag') {
+            newDownvotes = Math.max(0, newDownvotes - 1);
+        }
+
         await updateCell('Logs', `G${rowIndex}`, newDownvotes);
 
         const net = (targetLog.upvotes || 0) - newDownvotes;

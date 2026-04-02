@@ -6,7 +6,7 @@ export async function GET() {
     const session = await getSession();
     if (session?.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     try {
-        const logs = await getLogs();
+        const logs = await getLogs(true);
         return NextResponse.json(logs);
     } catch (e) {
         return NextResponse.json({ error: e.message }, { status: 500 });

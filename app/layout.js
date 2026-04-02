@@ -3,6 +3,7 @@ import './globals.css';
 import BottomNav from './components/BottomNav';
 import ThemeToggle from './components/ThemeToggle';
 import AuthHeader from './components/AuthHeader';
+import SplashScreen from './components/SplashScreen';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -23,15 +24,15 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <div className="app-container">
+          <SplashScreen />
           <div className="header-wrapper">
             <header className="header">
               <img src="/cat.png" alt="tnpkarma cat" className="header-mascot" />
               <h1 className="header-title">TnP Karma</h1>
             </header>
-            <p className="header-sub">Training &amp; Placement • Volunteer Tracker</p>
             <ThemeToggle />
             <AuthHeader />
           </div>

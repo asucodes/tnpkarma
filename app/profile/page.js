@@ -2,23 +2,27 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-function parseIndianDate(ts) {
-    if (!ts || ts === 'Imported') return null;
-    const parts = ts.split(/[\s,]+/);
-    if (parts.length >= 2) {
-        const dateParts = parts[0].split('/');
-        if (dateParts.length === 3) {
-            // Force MM/DD/YYYY parsing
-            const maybeD = new Date(`${dateParts[1]}/${dateParts[0]}/${dateParts[2]} ${parts[1]} ${parts[2] || ''}`);
-            if (!isNaN(maybeD)) return maybeD;
-        }
+function parseAnyDate(ts) {
+    if (!ts || ts === 'Imported') return new Date(2000, 0, 1);
+
+    // DD/MM/YYYY
+    const indianMatch = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (indianMatch) {
+        const [_, d, m, y] = indianMatch;
+        // Check if there's a time part
+        const timePart = ts.split(',')[1] || '';
+        const date = new Date(`${m}/${d}/${y} ${timePart}`);
+        if (!isNaN(date)) return date;
     }
-    return new Date(ts);
+
+    const d = new Date(ts);
+    return isNaN(d) ? new Date(2000, 0, 1) : d;
 }
 
 function timeAgo(ts) {
-    const d = parseIndianDate(ts);
-    if (!d || isNaN(d)) return ts || '';
+    const d = parseAnyDate(ts);
+    if (d.getFullYear() === 2000) return ts || 'Imported';
+
     const m = Math.floor((Date.now() - d) / 60000);
     if (m < 1) return 'just now';
     if (m < 60) return `${m}m ago`;
@@ -41,7 +45,8 @@ export default function ProfilePage() {
                 setUser(data.user);
                 fetch('/api/logs').then(r => r.json()).then(allLogs => {
                     const mine = allLogs.filter(l => l.rollNumber === data.user.rollNumber);
-                    setLogs(mine.reverse());
+                    // API returns newest first, so no need to reverse
+                    setLogs(mine);
                     setLoading(false);
                 });
             });

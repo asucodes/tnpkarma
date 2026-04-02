@@ -34,17 +34,21 @@ export default function AuthHeader() {
 
     return (
         <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '8px'
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+            fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px'
         }}>
-            <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>{user.name}</span>
+            <span style={{ fontWeight: '700', color: 'var(--text-primary)', opacity: 0.9 }}>{user.name}</span>
+            <div style={{ width: '1px', height: '10px', background: 'var(--border)' }}></div>
             <button
                 onClick={handleLogout}
                 style={{
-                    background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                    color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.65rem', padding: '2px 7px',
-                    fontFamily: 'inherit', fontWeight: '600', transition: 'all 0.15s'
+                    background: 'none', border: 'none', padding: 0,
+                    color: 'var(--accent)', cursor: 'pointer', fontSize: '0.7rem',
+                    fontFamily: 'inherit', fontWeight: '800', textTransform: 'uppercase',
+                    letterSpacing: '0.02em', transition: 'opacity 0.2s'
                 }}
+                onMouseOver={e => e.currentTarget.style.opacity = '0.7'}
+                onMouseOut={e => e.currentTarget.style.opacity = '1'}
             >
                 Logout
             </button>

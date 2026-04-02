@@ -46,6 +46,12 @@ export default function AdminPage() {
     const [resetRoll, setResetRoll] = useState('');
     const [resetPass, setResetPass] = useState('');
     const [resetMsg, setResetMsg] = useState('');
+    const [volunteers, setVolunteers] = useState([]);
+    const [manualRoll, setManualRoll] = useState('');
+    const [manualCompany, setManualCompany] = useState('');
+    const [manualHours, setManualHours] = useState('');
+    const [manualMsg, setManualMsg] = useState('');
+    const [manualLoading, setManualLoading] = useState(false);
 
     useEffect(() => {
         // Verify admin
@@ -60,12 +66,14 @@ export default function AdminPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [ev, logsRes] = await Promise.all([
-                fetch('/api/events').then(r => r.json()).catch(() => []),
+            const [ev, logsRes, volsRes] = await Promise.all([
+                fetch('/api/events?force=true').then(r => r.json()).catch(() => []),
                 fetch('/api/admin/logs').then(r => r.json()).catch(() => []),
+                fetch('/api/volunteers').then(r => r.json()).catch(() => []),
             ]);
             setEvents(Array.isArray(ev) ? ev.reverse() : []); // newest first
             setAllLogs(Array.isArray(logsRes) ? logsRes : []);
+            setVolunteers(Array.isArray(volsRes) ? volsRes : []);
         } catch (err) {
             console.error('Fetch error:', err);
         } finally { setLoading(false); }
@@ -79,16 +87,34 @@ export default function AdminPage() {
 
     const handleApprove = async (rowIndex) => {
         setActing(p => ({ ...p, [rowIndex]: true }));
-        await fetch('/api/admin/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rowIndex, approverName }) });
-        setAllLogs(p => p.map(l => l.rowIndex === rowIndex ? { ...l, status: 'approved', approver: approverName } : l));
-        setActing(p => ({ ...p, [rowIndex]: false }));
+        try {
+            const res = await fetch('/api/admin/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rowIndex, approverName }) });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Failed to approve: ${res.status} ${errText}`);
+            }
+            setAllLogs(p => p.map(l => l.rowIndex === rowIndex ? { ...l, status: 'approved', approver: approverName } : l));
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            setActing(p => ({ ...p, [rowIndex]: false }));
+        }
     };
 
     const handleReject = async (rowIndex) => {
         setActing(p => ({ ...p, [rowIndex]: true }));
-        await fetch('/api/admin/reject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rowIndex, approverName }) });
-        setAllLogs(p => p.map(l => l.rowIndex === rowIndex ? { ...l, status: 'rejected', approver: approverName } : l));
-        setActing(p => ({ ...p, [rowIndex]: false }));
+        try {
+            const res = await fetch('/api/admin/reject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rowIndex, approverName }) });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Failed to reject: ${res.status} ${errText}`);
+            }
+            setAllLogs(p => p.map(l => l.rowIndex === rowIndex ? { ...l, status: 'rejected', approver: approverName } : l));
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            setActing(p => ({ ...p, [rowIndex]: false }));
+        }
     };
 
     const handleCreateEvent = async (e) => {
@@ -108,6 +134,28 @@ export default function AdminPage() {
         const data = await res.json();
         setResetMsg(data.success ? `✓ Password reset for ${resetRoll}` : `Error: ${data.error}`);
         if (data.success) { setResetRoll(''); setResetPass(''); }
+    };
+
+    const handleManualLog = async (e) => {
+        e.preventDefault();
+        setManualMsg('');
+        if (!manualRoll || !manualCompany || !manualHours) return;
+        setManualLoading(true);
+        const res = await fetch('/api/admin/manual-log', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rollNumber: manualRoll, company: manualCompany, hours: parseFloat(manualHours) })
+        });
+        const data = await res.json();
+        if (data.success) {
+            setManualMsg(`✓ Successfully logged ${manualHours}h for ${manualRoll}`);
+            setManualRoll('');
+            setManualCompany('');
+            setManualHours('');
+            fetchData();
+        } else {
+            setManualMsg(`Error: ${data.error}`);
+        }
+        setManualLoading(false);
     };
 
     if (loading) return (
@@ -162,9 +210,9 @@ export default function AdminPage() {
 
             {/* Recent Events & Logs */}
             <p style={{ fontSize: '0.8rem', fontWeight: '700', marginBottom: '8px' }}>Recent Events & Logs</p>
-            {events.length === 0 ? (
-                <div className="empty-state"><div></div><div className="empty-state-text">No events yet.</div></div>
-            ) : events.map(ev => {
+            {events.filter(ev => !isExpired(ev.createdAt)).length === 0 ? (
+                <div className="empty-state"><div></div><div className="empty-state-text">No active events.</div></div>
+            ) : events.filter(ev => !isExpired(ev.createdAt)).map(ev => {
                 const eKey = ev.name.toLowerCase();
                 const eventLogs = logsByEvent[eKey] || [];
                 const pCount = eventLogs.filter(l => l.status === 'pending').length;
@@ -215,6 +263,30 @@ export default function AdminPage() {
                     </div>
                 );
             })}
+
+            {/* Rapid Entry Log */}
+            <div className="card" style={{ marginTop: '16px', background: 'var(--bg-secondary)' }}>
+                <p style={{ fontSize: '0.8rem', fontWeight: '700', marginBottom: '8px' }}>Rapid Entry Log</p>
+                <form onSubmit={handleManualLog} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <select className="form-select" value={manualRoll} onChange={e => setManualRoll(e.target.value)} required>
+                        <option value="">-- Select Volunteer --</option>
+                        {volunteers.map(v => (
+                            <option key={v.rollNumber} value={v.rollNumber}>{v.name} ({v.rollNumber})</option>
+                        ))}
+                    </select>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <select className="form-select" value={manualCompany} onChange={e => setManualCompany(e.target.value)} style={{ flex: 2 }} required>
+                            <option value="">-- Event --</option>
+                            {events.filter(ev => !isExpired(ev.createdAt)).map(ev => (
+                                <option key={ev.name} value={ev.name}>{ev.name}</option>
+                            ))}
+                        </select>
+                        <input className="form-input" type="number" step="0.5" placeholder="Hours" value={manualHours} onChange={e => setManualHours(e.target.value)} style={{ flex: 1 }} required />
+                        <button type="submit" className="btn btn-primary" disabled={manualLoading || !approverSet}>{manualLoading ? '...' : 'Log'}</button>
+                    </div>
+                    {manualMsg && <div style={{ fontSize: '0.78rem', color: manualMsg.startsWith('✓') ? '#16a34a' : '#e03d00' }}>{manualMsg}</div>}
+                </form>
+            </div>
 
             {/* Password Reset */}
             <div className="card" style={{ marginTop: '16px' }}>

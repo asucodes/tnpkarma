@@ -63,11 +63,11 @@ export default function Feed() {
         try {
             const res = await fetch('/api/logs');
             const json = await res.json();
-            // Show only approved logs; filter old non-BPCL imports from feed
+            // The API now returns logs in the correct stable sort order
             const visible = json.filter(log =>
                 log.status === 'approved' &&
                 (log.timestamp !== 'Imported' || log.company?.toLowerCase().includes('bpcl'))
-            ).reverse();
+            ).slice(0, 100);
             setLogs(visible);
         } catch { } finally { setLoading(false); }
     };
@@ -91,21 +91,27 @@ export default function Feed() {
         finally { setActing(p => ({ ...p, [rowIndex]: false })); }
     };
 
-    const handleFlag = async (rowIndex, company) => {
-        if (acting[rowIndex] || flagState[rowIndex]) return;
+    const handleFlag = async (log) => {
+        const { rowIndex, company, disputed } = log;
+        if (acting[rowIndex] || disputed) return;
+        const isCurrentlyFlagged = flagState[rowIndex];
+        const action = isCurrentlyFlagged ? 'unflag' : 'flag';
+
         setActing(p => ({ ...p, [rowIndex]: true }));
         try {
             const res = await fetch('/api/downvote', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rowIndex, company }),
+                body: JSON.stringify({ rowIndex, company, action }),
             });
             const data = await res.json();
             if (data.success) {
                 setLogs(logs.map(l => l.rowIndex === rowIndex ? { ...l, downvotes: data.downvotes, net: data.net, disputed: data.disputed } : l));
-                const next = { ...flagState, [rowIndex]: true };
+                const next = { ...flagState };
+                if (isCurrentlyFlagged) delete next[rowIndex];
+                else next[rowIndex] = true;
                 setFlagState(next);
                 localStorage.setItem('tnpkarma_flagged', JSON.stringify(next));
-            } else { alert(data.error || 'Could not flag.'); }
+            } else { alert(data.error || `Could not ${action}.`); }
         } catch { alert('Network error.'); }
         finally { setActing(p => ({ ...p, [rowIndex]: false })); }
     };
@@ -143,25 +149,27 @@ export default function Feed() {
                 <div className="stagger">
                     {logs.map((log) => {
                         const isDisputed = log.disputed;
+                        const isWitnessed = witnessState[log.rowIndex];
+                        const isFlagged = flagState[log.rowIndex];
                         return (
                             <div key={log.rowIndex} className={`card feed-card ${isDisputed ? 'feed-card-disputed' : ''}`}>
                                 <div className="feed-card-voter">
                                     <button
-                                        className={`witness-btn ${witnessState[log.rowIndex] ? 'witnessed' : ''}`}
+                                        className={`witness-btn ${isWitnessed ? 'witnessed' : ''}`}
                                         onClick={() => handleWitness(log.rowIndex, log.company)}
-                                        disabled={acting[log.rowIndex] || witnessState[log.rowIndex] || isDisputed}
-                                        title={witnessState[log.rowIndex] ? 'You witnessed this!' : 'I was there too'}
+                                        disabled={acting[log.rowIndex] || isWitnessed || isDisputed}
+                                        title={isWitnessed ? 'You witnessed this!' : 'I was there too'}
                                     >
-                                        <EyeIcon active={witnessState[log.rowIndex]} />
+                                        <EyeIcon active={isWitnessed} />
                                         <span>{log.upvotes || 0}</span>
                                     </button>
                                     <button
-                                        className={`flag-btn ${flagState[log.rowIndex] ? 'flagged' : ''}`}
-                                        onClick={() => handleFlag(log.rowIndex, log.company)}
-                                        disabled={acting[log.rowIndex] || flagState[log.rowIndex] || isDisputed}
-                                        title={flagState[log.rowIndex] ? 'Flagged' : 'Flag as suspicious'}
+                                        className={`flag-btn ${isFlagged ? 'flagged' : ''}`}
+                                        onClick={() => handleFlag(log)}
+                                        disabled={acting[log.rowIndex] || isDisputed}
+                                        title={isFlagged ? 'Unflag' : 'Flag as suspicious'}
                                     >
-                                        <FlagIcon active={flagState[log.rowIndex]} />
+                                        <FlagIcon active={isFlagged} />
                                     </button>
                                 </div>
                                 <div className="feed-card-content" style={isDisputed ? { textDecoration: 'line-through', opacity: 0.55 } : {}}>
